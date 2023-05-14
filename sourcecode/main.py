@@ -15,7 +15,6 @@ def extract_sentences(text, keyword):
     sentences = sent_tokenize(text)
     return [sentence for sentence in sentences if keyword in sentence]
 
-
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     text = read_pdf_file('12seedproduction.pdf')
