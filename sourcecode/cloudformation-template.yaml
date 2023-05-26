@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  'AWS::CloudFormation::Designer':
+    cfdfad66-314b-487f-a569-1c3b9dea0028:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 320
+        'y': 80
+      z: 0
+      embeds: []
+    6b5bdeeb-a164-489e-b5fd-48534b50c88b:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 520
+        'y': 300
+      z: 0
+      embeds: []
+    a21e4cf4-2c1d-4f96-8e80-8927e72c46ca:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 520
+        'y': 120
+      z: 0
+      embeds: []
+      dependson:
+        - 928b6882-6e26-4ea7-aedc-23c09dfa42a6
+    928b6882-6e26-4ea7-aedc-23c09dfa42a6:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 440
+        'y': 150
+      z: 0
+      embeds: []
+      dependson:
+        - d03bc369-8f8b-47db-b22d-56e4339560d3
+    d03bc369-8f8b-47db-b22d-56e4339560d3:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 520
+        'y': 200
+      z: 0
+      embeds: []
+      dependson:
+        - 6b5bdeeb-a164-489e-b5fd-48534b50c88b
+    cd055bc5-9ea0-475d-8cd2-1ea6b1afffce:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 620
+        'y': 200
+      z: 0
+      embeds: []
+      dependson:
+        - d03bc369-8f8b-47db-b22d-56e4339560d3
+    3a800f6c-9e28-44b2-8bad-cc1fecd41642:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 180
+      z: 0
+      embeds: []
+    bc06273e-8d4d-481f-a2f0-21bac200c237:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 250
+      z: 0
+      embeds: []
+Resources:
+  Cloud9Component:
+    Type: 'AWS::Cloud9::EnvironmentEC2'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: cfdfad66-314b-487f-a569-1c3b9dea0028
+  BucketProject:
+    Type: 'AWS::S3::Bucket'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 6b5bdeeb-a164-489e-b5fd-48534b50c88b
+  GlueDatabaseComponent:
+    Type: 'AWS::Glue::Database'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: a21e4cf4-2c1d-4f96-8e80-8927e72c46ca
+    DependsOn:
+      - GC22I58
+  CrawlerComponent:
+    Type: 'AWS::Glue::Crawler'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 928b6882-6e26-4ea7-aedc-23c09dfa42a6
+    DependsOn:
+      - ADC42TV
+  AthenaComponent:
+    Type: 'AWS::Athena::DataCatalog'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: d03bc369-8f8b-47db-b22d-56e4339560d3
+    DependsOn:
+      - BucketProject
+  QuickSightComponent:
+    Type: 'AWS::QuickSight::Dashboard'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: cd055bc5-9ea0-475d-8cd2-1ea6b1afffce
+    DependsOn:
+      - ADC42TV
+  IAMDataScientist:
+    Type: 'AWS::IAM::Role'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 3a800f6c-9e28-44b2-8bad-cc1fecd41642
+  IAMDataEngineer:
+    Type: 'AWS::IAM::Role'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: bc06273e-8d4d-481f-a2f0-21bac200c237
