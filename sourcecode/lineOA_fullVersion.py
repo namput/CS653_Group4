@@ -1,9 +1,14 @@
-    # -*- coding: utf-8 -*-
+
+
+# -*- coding: utf-8 -*-
+import os
 import boto3
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from flask import Flask,request
+import time
+import asyncio
 import os
 import json
 import requests
@@ -13,37 +18,40 @@ s3_bucket = s3.Bucket(name='bigdataprojectagri')
 #obj = s3.Object('bigdataprojectagri','cleandata/GHG_Volumns/GHG_Volumns.csv')
 #print(obj.get()['Body'].read())
 app = Flask(__name__)
-
-@app.route("/")                                                       
+#from matplotlib import rcParams
+#rcParams['font.family'] = 'Arial'
+@app.route("/")
 def hello():
-    return "Hello World!"
+  return "Hello World!"
 
 #------------insert new code below --------
 @app.route('/webhook' , methods = ['POST']) 
-def webhook():
+async def webhook():
     payload = request.json
     print(payload)
-    try :
-        event_reply = payload['events'][0]['replyToken']
-        print("==================send===============")
-        sendtext(payload)
-    except :
-        None
+#    try :
+    event_reply = payload['events'][0]['replyToken']
+    print("==================send===============")
+    await sendtext(payload)
+    await asyncio.sleep(1)
+    #except :
+     #   None
     return '',200
 
-def AHP(input):
+async def AHP(input):
     res = 0
     Matrix = [[1,0,0,0],
               [0,1,0,0],
               [0,0,1,0],
               [0,0,0,1]]
     province = s3.Object('bigdataprojectagri','cleandata/province/province.csv')
+    await asyncio.sleep(2)
     province = province.get()['Body'].read()
     province = province.decode('UTF-8')
     province = np.array(province.split('\n')[1:])
     dict_province = {}
     for p in province :
-        if len(p) > 10 : 
+        if len(p) > 2 : 
             temp = p.split(',')
             dict_province[temp[1]] = temp[2]
     temp = input.split('-')
@@ -86,23 +94,28 @@ def AHP(input):
     data = s3.Object('bigdataprojectagri','cleandata/fuzzy/fuzzy.csv')
     data = data.get()['Body'].read()
     data = data.decode('UTF-8')
-
+   # data = data.replace('\n',',')
+   # data = data.replace('\r',',')
     data = data.split('\n')
     clean = []
     for i in range(1,len(data)):
         temp = data[i].split(',')
-        print(temp)    
+#        print(temp)    
         clean.append([temp[1],temp[2],temp[3],temp[4],temp[5],temp[6]])
         if temp[0] == '76':
             break
     data = np.array(clean)
+  #  print(data.shape)
+ #   print(data)
+    #data = data.reshape(77,7)
+  #  data = pd.DataFrame(data[1:],columns=data[0])
     data = pd.DataFrame({
-                'Province' : data[:,0],
-                'Soybean' : data[:,1],
-                'Palm' : data[:,2],
-                'Coconut' : data[:,3],
-                'Groundnut' : data[:,4],
-                'Sunflower' : data[:,5]})
+		'Province' : data[:,0],
+		'Soybean' : data[:,1],
+		'Palm' : data[:,2],
+		'Coconut' : data[:,3],
+		'Groundnut' : data[:,4],
+		'Sunflower' : data[:,5]})
     agri = ['Soybean','Palm','Coconut','Groundnut','Sunflower']
     data['Soybean'] = data['Soybean'].astype(np.float64)
     data['Palm'] = data['Palm'].astype(np.float64)
@@ -116,10 +129,10 @@ def AHP(input):
     data['Groundnut'] = data['Groundnut']*weight[2]   
     data['Sunflower'] = data['Sunflower']*weight[2]
     standard = [[2,2,1],
-                [3,1,1],
-                [3,1,3],
-                [1,3,2],
-                [2,2,2]]
+    	        [3,1,1],
+    	        [3,1,3],
+    	        [1,3,2],
+    	        [2,2,2]]
     weight_agri = data.copy()
     for i in range(0,len(weight_agri)) :
         for j in range(1,6) :
@@ -129,40 +142,48 @@ def AHP(input):
     result = result.drop(['Province'],axis=1).reset_index(drop=True)
     result = result.to_numpy()[0]
     t_df = pd.DataFrame({'product':agri,'weight':result})
-    t_df = t_df.sort_values(['weight'])
+    t_df = t_df.sort_values(['weight'],ascending=[0])
     t_df = t_df[t_df['weight']!=0].reset_index(drop=True)
     temp_data = t_df.to_numpy()
     agri = temp_data[:,0]
     result = temp_data[:,1] 
-    print("จังหวัด",pro,"ควรปลูก(ตามลำดับ)")
+ #   print("จังหวัด",pro,"ควรปลูก(ตามลำดับ)")
+    dic_agri = {'Soybean':'ถั่วเหลือง','Palm':'ปาล์ม','Coconut':'มะพร้าว','Groundnut':'ถั่วลิสง','Sunflower':'ทานตะวัน'}
+    
+    text = ''
+    print(pro)
     for i in range(0,len(agri)) :
-        print(agri[i], ':',result[i])
-    return name,agri,result
+#        agri[i] = dic_agri[agri[i]]
+        text+=dic_agri[agri[i]]+ ': '+str(round((result[i]/sum(result))*100,2))+'%\n'
+    return name,agri,result,text
 
-def pie_chart(name,data,label) :
-    plt.pie(data,labels=label,autopct='%d%%')
-    plt.savefig(name+".png")
+async def pie_chart(name,data,label) :
+    colors = ['#FF3388','#EE7722','#22EE44','#33FFAA','#FF0000']
+    plt.pie(data,labels=label,autopct='%d%%',colors=colors[0:len(data)])
+    plt.savefig(name,bbox_inches = 'tight')
+    await asyncio.sleep(2)
+    plt.figure().clear()
+    plt.close()
+    plt.cla()
+    plt.clf()
+    await asyncio.sleep(2)
 
-def select_img(name):
-    img={'imageFile':open(name+'.png','rb')}
-    return img
-
-def sendtext(payload):
+async def sendtext(payload):
     Reply_token = payload['events'][0]['replyToken']
     UserID = payload['events'][0]['source']['userId']
     Timestamp = payload['events'][0]['timestamp']
-    lintNotifytoken = ''
+    lintNotifytoken = 'R5ykPmy1u0b3rlQESfd1DqRf+LHRghNkHPCy33o+61GdQYNs7Xtzb/jHeUvt8kYKD9hs3e6UCGjEa8EdKuU3Zo/Zh7JDYZasnEcAcmhdTx6rVnVuvhdCxcG9NnKSg6mZEQoU7mrjuz5xgwSPtoDDgAdB04t89/1O/w1cDnyilFU='
     text = payload['events'][0]['message']['text']
     reply_url = 'https://api.line.me/v2/bot/message/reply'
     headers = {
         'Content-Type':'application/json; charset=UTF-8',
         "Authorization": "Bearer " + lintNotifytoken}
     messages = ''
-    token = ''
+    img_c = False
     s3_img = 'temp_img/'
     path_img = 'https://bigdataprojectagri.s3.amazonaws.com/temp_img/'
     data = {
-        "to": token, 
+        "to": "7ed2b258216955503d67e7e4f08d46d3", 
         "mode": "active", 
         "replyToken": Reply_token, 
         "source": {"type": "user", "userId": UserID}, 
@@ -177,16 +198,24 @@ def sendtext(payload):
         },
       ]
     elif text[0:2]=='f:' :
-        name,agri,result = AHP(text[2:])
-        pie_chart(name,result,agri)
+        name,agri,result,text2 =await AHP(text[2:])
         name = name+'.png'
-        print(name)
-        s3_bucket.upload_file(Filename=name,Key='temp_img/'+name)
+        list_bucket = []
+        for my_bucket_object in s3_bucket.objects.all():
+            list_bucket.append(my_bucket_object.key)
+        if not ('temp_img/'+name in list_bucket) :
+            await pie_chart(name,result,agri)
+            await asyncio.sleep(2)
+            img_c =True 
+            s3_bucket.upload_file(Filename=name,Key='temp_img/'+name)
+            await asyncio.sleep(2)
         messages = [{
              "type":"image",
              'previewImageUrl':path_img+name,
              'originalContentUrl':path_img+name
-             }]
+             },{
+	     "type":"text",
+	     "text":text[8:]+ " การปลูกพืชแนะนำสัดส่วนดังนี้\n"+text2}]
     else :
         messages = [{
              "type":"text",
@@ -195,7 +224,12 @@ def sendtext(payload):
     data['messages'] = messages
     r = requests.post(reply_url, headers=headers, data=json.dumps(data))
     print(r)
-
+    await asyncio.sleep(3)
+    if img_c :
+#        s3.Object('bigdataprojectagri', 'temp_img/'+name).delete()
+        os.remove(name)
+    r.close()
+    return
 
 #------------ end edit zone  --------
 if __name__ == '__main__':
